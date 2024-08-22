@@ -1,0 +1,59 @@
+from numpy import loadtxt, sqrt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from sklearn.preprocessing import MinMaxScaler
+from matplotlib import pyplot
+
+# Load the dataset
+dataset = loadtxt('2011-2013.csv', delimiter=',')
+# Split into input (X) and output (y) variables
+X = dataset[:, 1:7]
+y = dataset[:, 0]
+scalarX, scalarY = MinMaxScaler(), MinMaxScaler()
+scalarX.fit(X)
+scalarY.fit(y.reshape(-1, 1))
+X = scalarX.transform(X)
+y = scalarY.transform(y.reshape(-1, 1))
+
+# Define the Keras model
+model = Sequential()
+model.add(Dense(6, input_dim=6, activation='relu'))
+model.add(Dense(3, activation='relu'))
+model.add(Dense(1, activation='linear'))  # Use 'linear' activation for regression
+
+# Compile the Keras model
+model.compile(loss='mean_squared_error', optimizer='adam')
+
+# Fit the Keras model on the dataset
+history = model.fit(X, y, epochs=200, batch_size=8, verbose=0)
+
+# Evaluate the Keras model on the training data
+mse = model.evaluate(X, y, verbose=0)
+rmse = sqrt(mse)
+print(f'Training MSE: {mse:.3f}, RMSE: {rmse:.3f}')
+
+# Load the new dataset
+dataset2 = loadtxt('2014.csv', delimiter=',')
+Xnew = dataset2[:, 1:7]
+Xnew2 = scalarX.transform(Xnew)
+
+# Predict on the new data
+ynew2 = model.predict(Xnew2)
+ynew = scalarY.inverse_transform(ynew2)
+
+# Reshape predictions for writing to file
+ynew3 = ynew.reshape(-1)
+
+# Plot the loss during training
+pyplot.plot(history.history['loss'], label='train')
+pyplot.xlabel('Epoch')
+pyplot.ylabel('Loss')
+pyplot.title('Model Loss During Training')
+pyplot.legend()
+pyplot.show()
+
+# Write predictions to a file
+filename = 'forecast.txt'
+with open(filename, "w") as f:
+    for i in range(len(ynew3)):
+        f.write(f"{ynew3[i]:.2f}\n")
